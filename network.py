@@ -12,7 +12,7 @@ class KWSNet(nn.Module):
         self.fc4 = nn.Linear(128, 8)
         self.softmax = nn.Softmax(dim=0)
     def forward(self, x):
-        #x = torch.flatten(x)
+        x = x.view(x.shape[0],-1)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
