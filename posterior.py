@@ -1,5 +1,5 @@
 
-from pip import main
+import numpy as np
 
 
 class Posterior():
@@ -28,4 +28,4 @@ class Posterior():
             else:
     '''
         
-        
+np.random.rand(10)

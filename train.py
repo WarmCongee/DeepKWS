@@ -1,5 +1,4 @@
-from calendar import c
-from json import load
+
 from random import shuffle
 from network import *
 import torch
