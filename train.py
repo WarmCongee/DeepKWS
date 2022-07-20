@@ -61,10 +61,11 @@ train_loader = torch.utils.data.DataLoader(train_set, batch_size=fbanks_batch_si
                                             shuffle=True, num_workers=16, pin_memory=True)
 '''
 
-
+'''
 valid_set = KWSDataSet(valid_dataset_path)
 valid_loader = torch.utils.data.DataLoader(valid_set, batch_size=fbanks_batch_size,
                                             shuffle=True, num_workers=16, pin_memory=True)
+'''
 
 net = KWSNet().to(device)
 
@@ -131,14 +132,12 @@ for epoch in range(3):
         #count_epoch = count_epoch+1
             
         if index % 2000000 == 1999999:
-            print(f'[{epoch + 1}, {count_epoch + 1:5d}] loss: {loss_epoch_sum / count_epoch:.7f}')
+            print(f'[{epoch + 1}, {index + 1:5d}] loss: {loss_epoch_sum / (index + 1):.7f}')
             StepLR.step()
             print("learning rate of epoch-%d: %f" % (epoch, optimizer.param_groups[0]['lr']))
                 
     torch.save(net.state_dict(), 'deep_kws-'+str(epoch)+'.pth')
-    print(f'[{epoch + 1}] average train loss: {loss_epoch_sum / count_epoch:.7f}')
-
-    StepLR.step()
+    print(f'[{epoch + 1}] average train loss: {loss_epoch_sum / (index + 1):.7f}')
     
     ###################valid####################
     count_valid = 0
@@ -153,9 +152,8 @@ for epoch in range(3):
         loss = criterion(outputs, labels)
         
         loss_sum_valid = loss_sum_valid + loss
-        count_valid = count_valid + 1
     
-    print(f'[{epoch + 1}] average valid loss: {loss_sum_valid / count_valid:.7f}')
+    print(f'[{epoch + 1}] average valid loss: {loss_sum_valid / (index+1):.7f}')
     
 
 torch.save(net.state_dict(), 'deep_kws.pth')
