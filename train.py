@@ -43,9 +43,16 @@ def combine_frames_as_frame(datas, labels):
     return re_datas, re_labels
 
 
+def split_batchs(batch_size, datas, labels):
+    data_batch_list =  list(torch.split(datas, batch_size, dim=0))
+    label_batch_list = list(torch.split(labels, batch_size, dim=0))
+    data_batch_list.pop()
+    label_batch_list.pop()
+    return data_batch_list, label_batch_list
+    
 
 fbanks_batch_size = 1
-device = torch.device('cuda:2' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda:6' if torch.cuda.is_available() else 'cpu')
 print('using device:', device)
 
 train_set = KWSDataSet(train_dataset_path)
@@ -60,7 +67,7 @@ net = KWSNet()
 net.to(device)
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(net.parameters(), lr=0.0000005, momentum=0.9)
+optimizer = optim.SGD(net.parameters(), lr=0.0005, momentum=0.9)
 StepLR = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.60)
 
 
@@ -71,42 +78,50 @@ for epoch in range(1):
     
     for index,data in enumerate(train_loader):
         inputs, labels = generate_batch_data(data)
-        inputs = inputs.to(device)
-        labels = labels.to(device, dtype=torch.int64)
-        optimizer.zero_grad()
-        outputs = net(inputs)
+        inputs, labels = split_batchs(16, inputs, labels)
         
-        loss = criterion(outputs, labels)
-        loss.backward()
+        for index, frame in enumerate(inputs):
+            
+            frame = frame.to(device)
+            label = labels[index].to(device, dtype=torch.int64)
+            optimizer.zero_grad()
+            outputs = net(frame)
         
-        
-        loss_epoch_sum = loss_epoch_sum + loss
-        count_epoch = count_epoch+1
-        
-        optimizer.step()
-        if count_epoch % 4000 == 3999:
-            print(f'[{epoch + 1}, {count_epoch + 1:5d}] loss: {loss_epoch_sum / count_epoch:.7f}')
-    
+            loss = criterion(outputs, label)
+            loss.backward()
+            optimizer.step()
+            
+            #loss_epoch_sum = loss_epoch_sum + loss
+            #count_epoch = count_epoch+1
+            
+            #if count_epoch % 2000 == 1999:
+                #print(f'[{epoch + 1}, {count_epoch + 1:5d}] loss: {loss_epoch_sum / count_epoch:.7f}')
+                #print("learning rate of epoch-%d: %f" % (epoch, optimizer.param_groups[0]['lr']))
+                
             
     print(f'[{epoch + 1}] average train loss: {loss_epoch_sum / count_epoch:.7f}')
 
     StepLR.step()
     
+    #######################################
     count_valid = 0
-    loss_sum_valid = 0
+    loss_sum_valid = 0.0
     for index,data in enumerate(valid_loader):
         inputs, labels = generate_batch_data(data)
-        inputs = inputs.to(device)
-        labels = labels.to(device, dtype=torch.int64)
-        outputs = net(inputs)
+        inputs, labels = split_batchs(16, inputs, labels)
         
-        loss = criterion(outputs, labels)
-        
-        loss_sum_valid = loss_sum_valid + loss
-        count_valid = count_epoch + 1
-    
+        for index, frame in enumerate(inputs):
             
-    print(f'average valid loss: {loss_sum_valid / count_valid:.7f}')
+            frame = frame.to(device)
+            label = labels[index].to(device, dtype=torch.int64)
+            outputs = net(frame)
+        
+            loss = criterion(outputs, label)
+        
+            loss_sum_valid = loss_sum_valid + loss
+            count_valid = count_valid+1
+    
+    print(f'[{epoch + 1}] average valid loss: {loss_sum_valid / count_valid:.7f}')
     torch.save(net.state_dict(), 'deep_kws-'+str(epoch)+'.pth')
 
 torch.save(net.state_dict(), 'deep_kws.pth')
