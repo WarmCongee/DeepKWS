@@ -12,21 +12,26 @@ train_dataset_path = "/home/disk1/user5/wyz/DataSet/TrainSet"
 valid_dataset_path = "/home/disk1/user5/wyz/DataSet/ValidSet"
 test_dataset_path = "/home/disk1/user5/wyz/DataSet/TestSet"
 
+
 def generate_batch_data(batch):
-    batch_datas = []
-    batch_labels = []
-    batch = torch.squeeze(batch, dim=0)
-    frame_list_2d = torch.split(batch, 1, dim=0)
-
-    frame_list_1d = []
-    for frame_2d in frame_list_2d:
-        frame_list_1d.append(frame_2d)
-
-    for frame_item in frame_list_1d:
-        batch_item_list = torch.split(frame_item, 40, dim=1)
-        batch_datas.append(batch_item_list[0])
-        batch_labels.append(batch_item_list[1])
-    return combine_frames_as_frame(batch_datas, batch_labels)
+    batch_X = []
+    batch_Y = []
+    for index, data in enumerate(batch):
+        batch_datas = []
+        batch_labels = []
+        frame_list_2d = torch.split(data, 1, dim=0)
+        for frame_item in frame_list_2d:
+            batch_item_list = torch.split(frame_item, 40, dim=1)
+            batch_datas.append(batch_item_list[0])
+            batch_labels.append(batch_item_list[1])
+        temp_x, temp_y = combine_frames_as_frame(batch_datas, batch_labels)
+        if index==0:
+            batch_X = temp_x
+            batch_Y = temp_y
+        else: 
+            batch_X = torch.cat((batch_X,temp_x),0)
+            batch_Y = torch.cat((batch_Y,temp_y),0)
+    return batch_X, batch_Y
 
 
 def combine_frames_as_frame(datas, labels):
@@ -42,119 +47,74 @@ def combine_frames_as_frame(datas, labels):
             re_labels = torch.cat((re_labels, torch.squeeze(labels[index], 0)), 0)
     return re_datas, re_labels
 
-
-def split_batchs(batch_size, datas, labels):
-    data_batch_list =  list(torch.split(datas, batch_size, dim=0))
-    label_batch_list = list(torch.split(labels, batch_size, dim=0))
-    data_batch_list.pop()
-    label_batch_list.pop()
-    return data_batch_list, label_batch_list
-    
-
 fbanks_batch_size = 1
-device = torch.device('cuda:6' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda:3' if torch.cuda.is_available() else 'cpu')
 print('using device:', device)
 
-'''
-train_set = KWSDataSet(train_dataset_path)
-train_loader = torch.utils.data.DataLoader(train_set, batch_size=fbanks_batch_size,
-                                            shuffle=True, num_workers=16, pin_memory=True)
-'''
 
-'''
-valid_set = KWSDataSet(valid_dataset_path)
-valid_loader = torch.utils.data.DataLoader(valid_set, batch_size=fbanks_batch_size,
+train_set = KWSDataSet(train_dataset_path)
+train_loader = torch.utils.data.DataLoader(train_set, batch_size=fbanks_batch_size, collate_fn=generate_batch_data,
                                             shuffle=True, num_workers=16, pin_memory=True)
-'''
+valid_set = KWSDataSet(valid_dataset_path)
+valid_loader = torch.utils.data.DataLoader(valid_set, batch_size=fbanks_batch_size, collate_fn=generate_batch_data,
+                                            shuffle=True, num_workers=16, pin_memory=True)
+
 
 net = KWSNet().to(device)
 
 criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(net.parameters(), lr=0.00005, momentum=0.9)
+optimizer = optim.SGD(net.parameters(), lr=0.0005)
 StepLR = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.60)
 
+def train():
+    for epoch in range(20): 
+        net.train()
+        print("learning rate of epoch-%d: %f" % (epoch, optimizer.param_groups[0]['lr']))
+        loss_epoch_sum = 0.0
 
-'''
-inputs_list = []
-labels_list = []
-for index, data in enumerate(train_loader):
-    long_inputs, long_labels = generate_batch_data(data)
-    unit_audio_inputs, unit_audio_labels = split_batchs(16, long_inputs, long_labels)
-    inputs_list = inputs_list + unit_audio_inputs
-    labels_list = labels_list + unit_audio_labels
-print("compelet proccess of train frame")
-
-torch.save(inputs_list, "./inputs_list_1.pth")
-torch.save(labels_list, "./labels_list_1.pth")
-
-'''
-
-'''
-valid_inputs_list = []
-valid_labels_list = []
-for index, data in enumerate(valid_loader):
-    long_inputs, long_labels = generate_batch_data(data)
-    unit_audio_inputs, unit_audio_labels = split_batchs(16, long_inputs, long_labels)
-    valid_inputs_list = valid_inputs_list + unit_audio_inputs
-    valid_labels_list = valid_labels_list + unit_audio_labels
-print("compelet proccess of valid frame")
-
-torch.save(valid_inputs_list, "./valid_inputs_list_1.pth")
-torch.save(valid_labels_list, "./valid_labels_list_1.pth")
-
-'''
-
-inputs_list = torch.load("wyz/DataSet/inputs_list_1.pth")
-labels_list = torch.load("wyz/DataSet/labels_list_1.pth")
-
-valid_inputs_list = torch.load("wyz/DataSet/valid_inputs_list_1.pth")
-valid_labels_list = torch.load("wyz/DataSet/valid_labels_list_1.pth")
-
-print("compelet proccess of frame")
-
-for epoch in range(3): 
-    print("learning rate of epoch-%d: %f" % (epoch, optimizer.param_groups[0]['lr']))
-    count_epoch = 0
-    loss_epoch_sum = 0.0
+        for index, data in enumerate(train_loader):
+            inputs = data[0].to(device)
+            labels =data[1].to(device, dtype=torch.int64)
+            optimizer.zero_grad()
+            outputs = net(inputs)
         
-    for index, inputs in enumerate(inputs_list):
+            loss = criterion(outputs, labels)
+            loss.backward()
+            optimizer.step()
+            del inputs, labels
+            loss_epoch_sum = loss_epoch_sum + loss
             
-        inputs = inputs.to(device)
-        labels = labels_list[index].to(device, dtype=torch.int64)
-        optimizer.zero_grad()
-        outputs = net(inputs)
+            
+            
+        print(f'[{epoch + 1}, {index + 1:5d}] loss: {loss_epoch_sum / (index + 1):.7f}')
+        StepLR.step()
+        print("learning rate of epoch-%d: %f" % (epoch, optimizer.param_groups[0]['lr']))
         
-        loss = criterion(outputs, labels)
-        loss.backward()
-        optimizer.step()
-            
-        loss_epoch_sum = loss_epoch_sum + loss
-        #count_epoch = count_epoch+1
-            
-        if index % 2000000 == 1999999:
-            print(f'[{epoch + 1}, {index + 1:5d}] loss: {loss_epoch_sum / (index + 1):.7f}')
-            StepLR.step()
-            print("learning rate of epoch-%d: %f" % (epoch, optimizer.param_groups[0]['lr']))
-                
-    torch.save(net.state_dict(), 'deep_kws-'+str(epoch)+'.pth')
-    print(f'[{epoch + 1}] average train loss: {loss_epoch_sum / (index + 1):.7f}')
+        
+        
+        torch.save(net.state_dict(), 'deep_kws-'+str(epoch)+'.pth')
+        #print(f'[{epoch + 1}] average train loss: {loss_epoch_sum / (index+1):.7f}')
     
-    ###################valid####################
+    
+def valid():
     count_valid = 0
     loss_sum_valid = 0.0
-    
-    for index, frame in enumerate(valid_inputs_list):
+    net.eval()
+    for index, data in enumerate(valid_loader):
             
-        frame = frame.to(device)
-        labels = valid_labels_list[index].to(device, dtype=torch.int64)
-        outputs = net(frame)
+        inputs = data[0].to(device)
+        labels =data[1].to(device, dtype=torch.int64)
+        outputs = net(inputs)
         
         loss = criterion(outputs, labels)
         
         loss_sum_valid = loss_sum_valid + loss
-    
-    print(f'[{epoch + 1}] average valid loss: {loss_sum_valid / (index+1):.7f}')
-    
+        del inputs, labels
+    print(f'average valid loss: {loss_sum_valid / (index+1):.7f}')
 
-torch.save(net.state_dict(), 'deep_kws.pth')
-print('Finished Training')
+if __name__ == '__main__':
+    train()
+    valid()
+    
+    torch.save(net.state_dict(), 'deep_kws.pth')
+    print('Finished Training')

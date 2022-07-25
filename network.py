@@ -10,11 +10,11 @@ class KWSNet(nn.Module):
         self.fc2 = nn.Linear(128, 128)
         self.fc3 = nn.Linear(128, 128)
         self.fc4 = nn.Linear(128, 8)
-        self.softmax = nn.Softmax(dim=0)
+        self.softmax = nn.Softmax(dim=-1)
     def forward(self, x):
         x = x.view(x.shape[0],-1)
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = F.relu(self.fc3(x))
-        x = self.softmax(self.fc4(x))
+        x = self.fc4(x)
         return x
