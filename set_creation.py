@@ -25,6 +25,8 @@ valid_target_path = "/home/disk1/user5/wyz/DataSet/ValidSet/"
 Labels = {"null": 0, "Hello": 1, "xiaogua": 2, "nihao": 3, "xiaoyi": 4, "jixu": 5, "tingzhi": 6, "bofang":7}
 key_class = ("Hello", "xiaogua", "nihao", "xiaoyi", "jixu", "tingzhi", "bofang", "null")
 
+Scaling = 1.6
+
 def return_first_halfkey(whole_key):
     if whole_key.startswith(key_class[0]):
         return key_class[0]
@@ -57,7 +59,7 @@ def create_positive_set(index_path, tag_path, target_root_path):
             name = items[0].split("-")
             video_path = items[1].replace("\n", "")
 
-            time_label = linecache.getline(tag_path, i+1).strip().split()
+            time_label = linecache.getline(tag_path, 23852+i+1).strip().split()
             label = name[1]
             feature_name = label+"-"+time_label[1]+"-"+time_label[2]+"-"+time_label[3]+"-"+time_label[4]+"-"+name[0]+name[-1]
 
@@ -65,9 +67,9 @@ def create_positive_set(index_path, tag_path, target_root_path):
             fbank_tensor = audio.compliance.kaldi.fbank(waveform=waveform, frame_length=25.0, frame_shift=10.0, num_mel_bins=40)
             tensor_label = list(range(fbank_tensor.shape[0]))
             for j in range(fbank_tensor.shape[0]):
-                if(j+1 > int(time_label[1]) and j+1 < int(time_label[2])):
+                if(j+1 > Scaling*int(time_label[1]) and j+1 < Scaling*int(time_label[2])):
                     tensor_label[j] = Labels.get(return_first_halfkey(label))
-                elif(j+1 > int(time_label[3]) and j+1 < int(time_label[4])):
+                elif(j+1 > Scaling*int(time_label[3]) and j+1 < Scaling*int(time_label[4])):
                     tensor_label[j] = Labels.get(return_second_halfkey(label))
                 else:
                     tensor_label[j] = Labels.get("null")

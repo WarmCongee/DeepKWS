@@ -48,7 +48,7 @@ def combine_frames_as_frame(datas, labels):
     return re_datas, re_labels
 
 fbanks_batch_size = 1
-device = torch.device('cuda:3' if torch.cuda.is_available() else 'cpu')
+device = torch.device('cuda:2' if torch.cuda.is_available() else 'cpu')
 print('using device:', device)
 
 
@@ -60,11 +60,33 @@ valid_loader = torch.utils.data.DataLoader(valid_set, batch_size=fbanks_batch_si
                                             shuffle=True, num_workers=16, pin_memory=True)
 
 
-net = KWSNet().to(device)
+net = KWSNet2().to(device)
 
-criterion = nn.CrossEntropyLoss()
+criterion = nn.CrossEntropyLoss().to(device)
 optimizer = optim.SGD(net.parameters(), lr=0.0005)
 StepLR = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1, gamma=0.60)
+
+
+def valid():
+    count_valid = 0
+    loss_sum_valid = 0.0
+    correct = 0
+    net.eval()
+    with torch.no_grad():
+        for index, data in enumerate(valid_loader):
+                
+            inputs = data[0].to(device)
+            labels =data[1].to(device, dtype=torch.int64)
+            outputs = net(inputs)
+            loss = criterion(outputs, labels)
+            loss_sum_valid = loss_sum_valid + loss
+            correct += (outputs.argmax(1)==labels).type(torch.float).sum().item()
+            count_valid += labels.shape[0]
+            
+            del inputs, labels
+            if index % 1000 == 999:
+                print(f'average valid loss: {loss_sum_valid / (index+1):.7f}')
+                print(f'acc: {correct / (count_valid):.7f}')
 
 def train():
     for epoch in range(20): 
@@ -86,35 +108,21 @@ def train():
             
             
             
-        print(f'[{epoch + 1}, {index + 1:5d}] loss: {loss_epoch_sum / (index + 1):.7f}')
+        
+        print(f'[{epoch + 1}] average train loss: {loss_epoch_sum / (index+1):.7f}')
         StepLR.step()
         print("learning rate of epoch-%d: %f" % (epoch, optimizer.param_groups[0]['lr']))
         
         
-        
-        torch.save(net.state_dict(), 'deep_kws-'+str(epoch)+'.pth')
-        #print(f'[{epoch + 1}] average train loss: {loss_epoch_sum / (index+1):.7f}')
+        if epoch % 4 == 3:
+            torch.save(net.state_dict(), 'deep_kws-net3-'+str(epoch)+'.pth')
+
+        valid()
     
-    
-def valid():
-    count_valid = 0
-    loss_sum_valid = 0.0
-    net.eval()
-    for index, data in enumerate(valid_loader):
-            
-        inputs = data[0].to(device)
-        labels =data[1].to(device, dtype=torch.int64)
-        outputs = net(inputs)
-        
-        loss = criterion(outputs, labels)
-        
-        loss_sum_valid = loss_sum_valid + loss
-        del inputs, labels
-    print(f'average valid loss: {loss_sum_valid / (index+1):.7f}')
+
 
 if __name__ == '__main__':
     train()
-    valid()
     
     torch.save(net.state_dict(), 'deep_kws.pth')
     print('Finished Training')

@@ -25,7 +25,7 @@ thresholds = np.arange(0, 1.0, 0.001)
 
 
 test_dataset_path = "/home/disk1/user5/wyz/DataSet/TestSet"
-NET_MODEL = "/home/disk1/user5/wyz/deep_kws-19.pth"
+NET_MODEL = "/home/disk1/user5/wyz/Models/deep_kws-data2-net1-9.pth"
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 
 
@@ -121,9 +121,9 @@ def roc_draw(total_count, false_count, eval_res):
     plt.xlabel('False Alarms')
     plt.ylabel('False Rejects')
     plt.title('FA VS FR')
-    plt.xlim(0,0.1)
-    plt.ylim(0,0.1)
-    plt.savefig('ROC1.png', dpi=300)
+    plt.xlim(0,1.0)
+    plt.ylim(0,1.0)
+    plt.savefig('ROC4.png', dpi=300)
     plt.clf()
     
     
