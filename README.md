@@ -10,31 +10,31 @@ This method modifies the network structure on the basis of the original paper, o
 
 ### Net1-DeepKws DNN
 
-![net1](C:\Users\WarmCongee\Desktop\DeepKWS\pic\net1.png)
+![net1](pic\net1.png)
 
 ## Net1 Performance
 
-![net1_performance](C:\Users\WarmCongee\Desktop\DeepKWS\pic\net1_performance.png)
+![net1_performance](pic\net1_performance.png)
 
 
 
 ### Net2-DNN wirch BN and Dropout
 
-![net2](C:\Users\WarmCongee\Desktop\DeepKWS\pic\net2.png)
+![net2](pic\net2.png)
 
 ### Net2 Performance
 
-![net2_performance](C:\Users\WarmCongee\Desktop\DeepKWS\pic\net2_performance.png)
+![net2_performance](pic\net2_performance.png)
 
 
 
 ### Net3-Resnet18
 
-![net3](C:\Users\WarmCongee\Desktop\DeepKWS\pic\net3.png)
+![net3](pic\net3.png)
 
 ### Net Performance
 
-![net3_performance](C:\Users\WarmCongee\Desktop\DeepKWS\pic\net3_performance.png)
+![net3_performance](pic\net3_performance.png)
 
 
 
