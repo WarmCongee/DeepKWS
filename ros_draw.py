@@ -5,10 +5,11 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
+from torchvision.models import resnet18
 #from train import generate_batch_data
 #from train import combine_frames_as_frame
 from posterior import Posterior
-from network import KWSNet
+from network import KWSNet, KWSNet2
 from data_set import KWSDataSet
 
 # thresholds当前枚举的置信度阈值
@@ -24,9 +25,10 @@ from data_set import KWSDataSet
 thresholds = np.arange(0, 1.0, 0.001)
 
 
-test_dataset_path = "/home/disk1/user5/wyz/DataSet/TestSet"
-NET_MODEL = "/home/disk1/user5/wyz/Models/deep_kws-data2-net1-9.pth"
-device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+test_dataset_path = "/home/disk1/user5/wyz/DataSet/HardTestSet"
+NET_MODEL = "/home/disk1/user5/wyz/deep_kws-data2-net3-15.pth"
+device = torch.device('cuda:2' if torch.cuda.is_available() else 'cpu')
+Sentence_Labels = ["Helloxiaogua", "nihaoxiaoyi", "jixubofang", "tingzhibofang"]
 
 
 def generate_batch_data(batch):
@@ -68,7 +70,12 @@ def get_model_roc(test_dataset_url, model_url, device):
     test_set = KWSDataSet(test_dataset_url)
     test_loader = torch.utils.data.DataLoader(test_set, batch_size=1, collate_fn=generate_batch_data,
                                                 shuffle=True, num_workers=16, pin_memory=True)
-    net = KWSNet().to(device)
+    net = resnet18()
+    num_ftrs = net.fc.in_features
+    net.fc = nn.Linear(num_ftrs, 8)
+    net.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3, bias=False)
+    net = net.to(device)
+    #net = KWSNet().to(device)
     net.load_state_dict(torch.load(model_url))
     count = [0]*5
     total_counts = []
@@ -83,6 +90,7 @@ def get_model_roc(test_dataset_url, model_url, device):
         rel_sentence_label = Posterior.get_video_real_label(labels)
         
         inputs = data[0].to(device)
+        inputs = torch.unsqueeze(inputs, 1)
         outputs = net(inputs)
         outputs = F.softmax(outputs, dim=1)
         confidence = Posterior.get_confidence(outputs,30,100)
@@ -116,18 +124,59 @@ def get_model_roc(test_dataset_url, model_url, device):
     
 
 def roc_draw(total_count, false_count, eval_res):
+    cur = []
     for i in range(len(total_count)):
-        roc_one_line(total_count[i], false_count[i], eval_res[i])
-    plt.xlabel('False Alarms')
-    plt.ylabel('False Rejects')
-    plt.title('FA VS FR')
+    	cur.append(roc2_one_line(total_count[i], false_count[i], eval_res[i], Sentence_Labels[i]))
+    plt.legend(loc='lower right')
+    #plt.xlabel('False Alarms')
+    #plt.ylabel('False Rejects')
+    #plt.title('FA VS FR')
+    plt.xlabel('FPR')
+    plt.ylabel('TPR')
+    plt.title('ROC Space')
     plt.xlim(0,1.0)
     plt.ylim(0,1.0)
-    plt.savefig('ROC4.png', dpi=300)
+    plt.savefig('ROC-Space-net1.png', dpi=300)
+    plt.clf()
+
+    cur = []
+    for i in range(len(total_count)):
+    	cur.append(roc_one_line(total_count[i], false_count[i], eval_res[i], Sentence_Labels[i]))
+    plt.legend(loc='upper right')
+    plt.xlabel('False Alarms')
+    plt.ylabel('False Rejects')
+    plt.title('ROC FA-FR')
+    plt.xlim(0,1.0)
+    plt.ylim(0,1.0)
+    plt.savefig('ROC-FAFR-net1.png', dpi=300)
+    plt.clf()
+
+    cur = []
+    for i in range(len(total_count)):
+    	cur.append(roc_one_line(total_count[i], false_count[i], eval_res[i], Sentence_Labels[i]))
+    plt.legend(loc='upper right')
+    plt.xlabel('False Alarms')
+    plt.ylabel('False Rejects')
+    plt.title('ROC FA-FR')
+    plt.xlim(0,0.20)
+    plt.ylim(0,0.15)
+    plt.savefig('ROC-FAFR-net1-0.20-0.15.png', dpi=300)
+    plt.clf()
+
+    cur = []
+    for i in range(len(total_count)):
+    	cur.append(roc_one_line(total_count[i], false_count[i], eval_res[i], Sentence_Labels[i]))
+    plt.legend(loc='upper right')
+    plt.xlabel('False Alarms')
+    plt.ylabel('False Rejects')
+    plt.title('ROC FA-FR')
+    plt.xlim(0,0.10)
+    plt.ylim(0,0.10)
+    plt.savefig('ROC-FAFR-net1-0.10-0.10.png', dpi=300)
     plt.clf()
     
     
-def roc_one_line(total_count, false_count, eval_res):
+def roc_one_line(total_count, false_count, eval_res, line_name):
     false_ind = 0
     true_ind = false_count
     true_count = total_count - false_count
@@ -150,7 +199,33 @@ def roc_one_line(total_count, false_count, eval_res):
         frs.append(fr)
 
     # draw plots showing the result
-    plt.plot(fas, frs)
+    return plt.plot(fas, frs, label=line_name)
+
+
+def roc2_one_line(total_count, false_count, eval_res, line_name):
+    false_ind = 0
+    true_ind = false_count
+    true_count = total_count - false_count
+    fas = []
+    frs = []
+    best_add_thres = float('inf')
+    best_add_score = float('inf')
+    for threshold in thresholds:
+        while false_ind < false_count and eval_res[false_ind]['score'] < threshold:
+            false_ind += 1
+        while true_ind < total_count and eval_res[true_ind]['score'] < threshold:
+            true_ind += 1
+
+        # FA = FP / (TN + FP)
+        fa = (false_count - false_ind) / false_count
+        # FR = FN / (TP + FN)
+        fr = (total_count - true_ind) / true_count
+
+        fas.append(fa)
+        frs.append(fr)
+
+    # draw plots showing the result
+    plt.plot(fas, frs, label=line_name)
 
     
 get_model_roc(test_dataset_path, NET_MODEL, device)

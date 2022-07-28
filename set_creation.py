@@ -22,9 +22,13 @@ pos_valid_index_path = "/home/disk1/user5/task1_data/positive/valid.scp"
 neg_valid_index_path = "/home/disk1/user5/task1_data/negative/valid.scp"
 valid_target_path = "/home/disk1/user5/wyz/DataSet/ValidSet/"
 
+# hard
+hard_index_path = "/home/disk1/task1_data/test_3_hard.csv"
+hard_target_path = "/home/disk1/user5/wyz/DataSet/HardTestSet/"
+
 Labels = {"null": 0, "Hello": 1, "xiaogua": 2, "nihao": 3, "xiaoyi": 4, "jixu": 5, "tingzhi": 6, "bofang":7}
 key_class = ("Hello", "xiaogua", "nihao", "xiaoyi", "jixu", "tingzhi", "bofang", "null")
-
+Sentence_Labels = ["Helloxiaogua", "nihaoxiaoyi", "jixubofang", "tingzhibofang"]
 Scaling = 1.6
 
 def return_first_halfkey(whole_key):
@@ -103,6 +107,43 @@ def create_negative_set(index_path, tag_path, target_root_path):
             print("saved tensor to:" + target_root_path+feature_name+".pth")
 
 
+def create_hard_set(index_path, target_root_path):
+    with open(index_path, 'r') as f:
+        lines = f.readlines()
+        for index, line in enumerate(lines):
+            if index != 0:
+                items = line.split(",")
+                name = items[0]
+                video_path = items[1].replace("\n", "")
+                whole_time = items[2]
+                time_label = [float(items[3]), float(items[4]), float(items[5]), float(items[6])]
+                label = int(items[7])
+
+                if label==0:
+                    feature_name = "null-" + name
+                else:
+                    feature_name = "jixubofang-" + name
+
+                waveform, sr = audio.load(video_path)
+                fbank_tensor = audio.compliance.kaldi.fbank(waveform=waveform, frame_length=25.0, frame_shift=10.0, num_mel_bins=40)
+                tensor_label = list(range(fbank_tensor.shape[0]))
+                if label==0:
+                    for j in range(fbank_tensor.shape[0]):
+                        tensor_label[j] = Labels.get("null")
+                else:
+                    for j in range(fbank_tensor.shape[0]):
+                        if(j < (fbank_tensor.shape[0]/2)):
+                            tensor_label[j] = Labels.get("jixu")
+                        else:
+                            tensor_label[j] = Labels.get("bofang")
+                    
+                tensor_label = torch.tensor(tensor_label).unsqueeze(1)
+                fbank_tensor = torch.cat((fbank_tensor, tensor_label),1)
+
+                torch.save(fbank_tensor, target_root_path+feature_name+".pth")
+                print("saved tensor to:" + target_root_path+feature_name+".pth")
+
+
 #create_positive_set(index_path=pos_train_index_path, tag_path=pos_tag_path, target_root_path=train_target_path)
 #create_negative_set(index_path=neg_train_index_path, tag_path=neg_tag_path, target_root_path=train_target_path)
 
@@ -112,3 +153,5 @@ def create_negative_set(index_path, tag_path, target_root_path):
 
 #create_positive_set(index_path=pos_test_index_path, tag_path=pos_tag_path, target_root_path=test_target_path)
 #create_negative_set(index_path=neg_test_index_path, tag_path=neg_tag_path, target_root_path=test_target_path)
+
+#create_hard_set(hard_index_path,hard_target_path)
