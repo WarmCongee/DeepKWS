@@ -10,31 +10,31 @@ This method modifies the network structure on the basis of the original paper, o
 
 ### Net1-DeepKws DNN
 
-![net1](https://github.com/WarmCongee/DeepKWS/tree/master/pic/net1.png)
+![net1](https://github.com/WarmCongee/DeepKWS/raw/master/pic/net1.png)
 
 ## Net1 Performance
 
-![net1_performance](https://github.com/WarmCongee/DeepKWS/tree/master/pic/net1_performance.png)
+![net1_performance](https://github.com/WarmCongee/DeepKWS/raw/master/pic/net1_performance.png)
 
 
 
 ### Net2-DNN wirch BN and Dropout
 
-![net2](https://github.com/WarmCongee/DeepKWS/tree/master/pic/net2.png)
+![net2](https://github.com/WarmCongee/DeepKWS/raw/master/pic/net2.png)
 
 ### Net2 Performance
 
-![net2_performance](https://github.com/WarmCongee/DeepKWS/tree/master/pic/net2_performance.png)
+![net2_performance](https://github.com/WarmCongee/DeepKWS/raw/master/pic/net2_performance.png)
 
 
 
 ### Net3-Resnet18
 
-![net3](https://github.com/WarmCongee/DeepKWS/tree/master/pic/net3.png)
+![net3](https://github.com/WarmCongee/DeepKWS/raw/master/pic/net3.png)
 
 ### Net Performance
 
-![net3_performance](https://github.com/WarmCongee/DeepKWS/tree/master/pic/net3_performance.png)
+![net3_performance](https://github.com/WarmCongee/DeepKWS/raw/master/pic/net3_performance.png)
 
 
 
