@@ -8,9 +8,6 @@ Code reproduction of the paper [Small-footprint keyword spotting using deep neur
 
 This method modifies the network structure on the basis of the original paper, optimizes the network and obtains better results
 
-### Net1-DeepKws DNN
-
-![net1](https://github.com/WarmCongee/DeepKWS/raw/master/pic/net1.png)
 
 ## Net1 Performance
 
